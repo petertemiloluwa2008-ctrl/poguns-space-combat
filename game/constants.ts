@@ -14,36 +14,40 @@ export const NEON_GREEN = '#10B981';
 export const NEON_LIME = '#39FF14';
 export const GOLD_ACCENT = '#FFD700';
 
-// Player Configuration
-export const PLAYER_SPEED = 5.5;
-export const PLAYER_HEALTH = 100;
-export const PLAYER_WIDTH = 44;
-export const PLAYER_HEIGHT = 52;
-export const BASE_FIRE_COOLDOWN = 175; // ms
-export const PROJECTILE_DAMAGE = 25;
-export const MAGAZINE_CAPACITY = 30;
-export const INITIAL_RESERVE_AMMO = 120;
-export const RELOAD_DURATION = 1000; // ms
-export const INVULNERABILITY_DURATION = 800; // ms
+// Player Global Defaults
+export const PLAYER_WIDTH = 46;
+export const PLAYER_HEIGHT = 54;
+export const MAGAZINE_CAPACITY = 40;
+export const INITIAL_RESERVE_AMMO = 200;
+export const RELOAD_DURATION = 900; // ms
+export const INVULNERABILITY_DURATION = 900; // ms
 
 // Health Regeneration
 export const REGEN_DELAY_MS = 4500; // 4.5 seconds after last damage
 export const REGEN_HP_PER_SEC = 3.5;
 
-// Projectile Configuration
-export const PROJECTILE_SPEED = 12.5;
-export const PROJECTILE_WIDTH = 6;
-export const PROJECTILE_HEIGHT = 18;
-export const ENEMY_PROJECTILE_SPEED = 5.5;
-export const ENEMY_PROJECTILE_SIZE = 9;
+// Bombs & Power Shot
+export const MAX_BOMBS = 3;
+export const INITIAL_BOMBS = 1;
+export const BOMB_DAMAGE = 350;
+export const BOMB_DURATION_MS = 1500;
 
-// Power-Up Configurations
-export const POWERUP_SPEED = 1.4;
-export const POWERUP_SIZE = 26;
-export const POWERUP_LIFETIME = 12000; // ms before despawn
-export const DROP_CHANCE = 0.28; // 28% drop rate on enemy kill
-export const SHIELD_DURATION_MS = 8000; // 8 seconds of plasma shield
-export const OVERDRIVE_DURATION_MS = 10000; // 10 seconds of max tier multi-shot
+// Upgrades & Bonus Durations
+export const SHIELD_DURATION_MS = 10000; // 10s
+export const RAPID_FIRE_DURATION_MS = 15000; // 15s
+export const INVINCIBLE_DURATION_MS = 6000; // 6s
+export const POWERUP_SPEED = 1.35;
+export const POWERUP_SIZE = 28;
+export const POWERUP_LIFETIME = 14000; // ms before despawn
+export const DROP_CHANCE = 0.32; // 32% drop chance on enemy kill
+
+// Projectile Configuration
+export const PROJECTILE_SPEED = 13.0;
+export const PROJECTILE_WIDTH = 6;
+export const PROJECTILE_HEIGHT = 20;
+export const PROJECTILE_DAMAGE = 26;
+export const ENEMY_PROJECTILE_SPEED = 5.2;
+export const ENEMY_PROJECTILE_SIZE = 9;
 
 // Enemy Configurations
 export interface EnemyConfig {
@@ -80,17 +84,17 @@ export const ENEMY_CONFIGS = {
     glowColor: '#48CAE4',
   },
   heavy: {
-    health: 180,
-    speed: 1.2,
+    health: 200,
+    speed: 1.1,
     score: 500,
     damage: 35,
-    width: 66,
-    height: 66,
+    width: 68,
+    height: 68,
     color: '#FF6B35',
     glowColor: '#F77F00',
   },
   shooter: {
-    health: 80,
+    health: 85,
     speed: 1.8,
     score: 300,
     damage: 20,
@@ -98,10 +102,10 @@ export const ENEMY_CONFIGS = {
     height: 48,
     color: '#E01E37',
     glowColor: '#FF3B5C',
-    shootCooldown: 1600,
+    shootCooldown: 1500,
   },
   stealth: {
-    health: 65,
+    health: 70,
     speed: 2.6,
     score: 400,
     damage: 25,
@@ -109,39 +113,50 @@ export const ENEMY_CONFIGS = {
     height: 44,
     color: '#8338EC',
     glowColor: '#3A86FF',
-    shootCooldown: 2000,
+    shootCooldown: 1900,
   },
   kamikaze: {
     health: 35,
     speed: 5.2,
     score: 250,
     damage: 30,
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
     color: '#FF0054',
     glowColor: '#FF5400',
   },
+  shield: {
+    health: 120,
+    speed: 1.5,
+    score: 450,
+    damage: 25,
+    width: 52,
+    height: 52,
+    color: '#3A86FF',
+    glowColor: '#00F0FF',
+    shootCooldown: 2200,
+  },
   elite: {
-    health: 260,
+    health: 300,
     speed: 1.6,
-    score: 800,
+    score: 850,
     damage: 30,
-    width: 68,
-    height: 60,
+    width: 72,
+    height: 64,
     color: '#FF007F',
     glowColor: '#FF69C9',
-    shootCooldown: 1300,
+    shootCooldown: 1200,
   },
   boss: {
-    health: 2200,
+    health: 2800,
     speed: 1.1,
-    score: 6000,
+    score: 7000,
     damage: 40,
-    width: 140,
-    height: 105,
+    width: 145,
+    height: 110,
     color: '#4A0E4E',
     glowColor: '#FF1493',
-    shootCooldown: 900,
+    shootCooldown: 850,
   },
 };
 
@@ -162,9 +177,9 @@ export const STAGES: StageData[] = [
     stageNumber: 1,
     name: 'NEON OUTSKIRTS',
     subtitle: 'Sector Alpha — Vanguard Infiltration',
-    scoreTarget: 1500,
+    scoreTarget: 1800,
     allowedEnemies: ['basic', 'fast'],
-    spawnInterval: 1200,
+    spawnInterval: 1100,
     speedMultiplier: 1.0,
     isBossStage: false,
   },
@@ -172,9 +187,9 @@ export const STAGES: StageData[] = [
     stageNumber: 2,
     name: 'ASTEROID CORRIDOR',
     subtitle: 'Sector Beta — Hostile Interceptors',
-    scoreTarget: 3800,
+    scoreTarget: 4500,
     allowedEnemies: ['basic', 'fast', 'shooter'],
-    spawnInterval: 1000,
+    spawnInterval: 950,
     speedMultiplier: 1.15,
     isBossStage: false,
   },
@@ -182,9 +197,9 @@ export const STAGES: StageData[] = [
     stageNumber: 3,
     name: 'CYBER NEBULA',
     subtitle: 'Sector Gamma — Armored Siege Fleet',
-    scoreTarget: 7000,
-    allowedEnemies: ['fast', 'shooter', 'heavy', 'stealth'],
-    spawnInterval: 850,
+    scoreTarget: 8500,
+    allowedEnemies: ['fast', 'shooter', 'heavy', 'stealth', 'shield'],
+    spawnInterval: 800,
     speedMultiplier: 1.3,
     isBossStage: false,
   },
@@ -192,9 +207,9 @@ export const STAGES: StageData[] = [
     stageNumber: 4,
     name: 'COMMAND FLEET ARMADA',
     subtitle: 'Sector Delta — Elite Assault Swarm',
-    scoreTarget: 11500,
-    allowedEnemies: ['shooter', 'heavy', 'stealth', 'kamikaze', 'elite'],
-    spawnInterval: 700,
+    scoreTarget: 14000,
+    allowedEnemies: ['shooter', 'heavy', 'stealth', 'kamikaze', 'shield', 'elite'],
+    spawnInterval: 650,
     speedMultiplier: 1.45,
     isBossStage: false,
   },
@@ -202,15 +217,15 @@ export const STAGES: StageData[] = [
     stageNumber: 5,
     name: 'POGUNS MATRIX CORE',
     subtitle: 'FINAL SECTOR — Dreadnought Prime Matrix',
-    scoreTarget: 20000,
-    allowedEnemies: ['fast', 'stealth', 'kamikaze', 'elite'],
-    spawnInterval: 950,
-    speedMultiplier: 1.55,
+    scoreTarget: 25000,
+    allowedEnemies: ['fast', 'stealth', 'kamikaze', 'shield', 'elite'],
+    spawnInterval: 850,
+    speedMultiplier: 1.6,
     isBossStage: true,
   },
 ];
 
-// Profile Ranks
+// Pilot Ranks
 export const PILOT_RANKS = [
   { rank: 'CADET', minXp: 0, color: '#A0AEC0' },
   { rank: 'VANGUARD', minXp: 1500, color: '#00F0FF' },

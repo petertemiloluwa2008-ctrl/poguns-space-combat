@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { GameEngine, GameState } from '@/game/engine';
 import { AudioManager } from '@/game/audio/AudioManager';
 import { GameMode } from '@/game/types';
+import { ShipId, SHIPS } from '@/game/ships';
 import { ProfileManager } from '@/game/profileManager';
 import GameCanvas from './GameCanvas';
 import GameHUD from './GameHUD';
@@ -19,9 +20,14 @@ export default function SpaceGame() {
 
   const [selectedMode, setSelectedMode] = useState<GameMode>('solo');
   const [touchEnabled, setTouchEnabled] = useState(false);
+  const [selectedShipId, setSelectedShipId] = useState<ShipId>(() => {
+    const profile = ProfileManager.getInstance().getActiveProfile();
+    return (profile?.selectedShipId as ShipId) || 'vanguard';
+  });
 
   const [gameState, setGameState] = useState<GameState>(() => {
     const profile = ProfileManager.getInstance().getActiveProfile();
+    const ship = SHIPS[profile?.selectedShipId || 'vanguard'] || SHIPS.vanguard;
     return {
       status: 'start',
       mode: 'solo',
@@ -35,8 +41,10 @@ export default function SpaceGame() {
       stageName: 'NEON OUTSKIRTS',
       comboMultiplier: 1.0,
       p1: {
-        health: 100,
-        maxHealth: 100,
+        shipId: ship.id,
+        shipName: ship.name,
+        health: ship.health,
+        maxHealth: ship.maxHealth,
         ammo: 30,
         maxAmmo: 30,
         reserveAmmo: 120,
@@ -44,11 +52,18 @@ export default function SpaceGame() {
         weaponTier: 1,
         isShielded: false,
         shieldTimeRemaining: 0,
+        isInvincible: false,
+        invincibleTimeRemaining: 0,
+        isRapidFire: false,
+        rapidFireTimeRemaining: 0,
+        bombs: 2,
+        powerShotProgress: 0,
+        powerShotReady: false,
         isAlive: true,
         kills: 0,
       },
-      playerHealth: 100,
-      playerMaxHealth: 100,
+      playerHealth: ship.health,
+      playerMaxHealth: ship.maxHealth,
       ammo: 30,
       maxAmmo: 30,
       reserveAmmo: 120,
@@ -61,12 +76,25 @@ export default function SpaceGame() {
     setGameState({ ...state });
   }, []);
 
-  // Detect touch device capability on mount
+  // Detect mobile & touch capability on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      const isMobileScreen = window.innerWidth <= 768;
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (isMobileScreen || isTouchDevice) {
         setTouchEnabled(true);
       }
+
+      // Prevent accidental bounce or pull-to-refresh on mobile
+      const preventDefaultTouch = (e: TouchEvent) => {
+        if (e.touches.length > 1) {
+          e.preventDefault();
+        }
+      };
+      document.addEventListener('touchmove', preventDefaultTouch, { passive: false });
+      return () => {
+        document.removeEventListener('touchmove', preventDefaultTouch);
+      };
     }
   }, []);
 
@@ -92,14 +120,22 @@ export default function SpaceGame() {
     engineRef.current?.setMode(mode);
   }, []);
 
+  const handleShipSelect = useCallback((shipId: ShipId) => {
+    setSelectedShipId(shipId);
+    ProfileManager.getInstance().updateProfile({ selectedShipId: shipId });
+    engineRef.current?.setPlayerShip(shipId, 'p1');
+  }, []);
+
   const handleStart = useCallback(() => {
+    engineRef.current?.setPlayerShip(selectedShipId, 'p1');
     engineRef.current?.setMode(selectedMode);
     engineRef.current?.start();
-  }, [selectedMode]);
+  }, [selectedMode, selectedShipId]);
 
   const handleRestart = useCallback(() => {
+    engineRef.current?.setPlayerShip(selectedShipId, 'p1');
     engineRef.current?.restart();
-  }, []);
+  }, [selectedShipId]);
 
   const handlePause = useCallback(() => {
     engineRef.current?.pause();
@@ -117,12 +153,20 @@ export default function SpaceGame() {
     engineRef.current?.triggerReload(player);
   }, []);
 
+  const handlePowerShot = useCallback((player: 'p1' | 'p2' = 'p1') => {
+    engineRef.current?.triggerPowerShot(player);
+  }, []);
+
+  const handleBomb = useCallback((player: 'p1' | 'p2' = 'p1') => {
+    engineRef.current?.triggerBomb(player);
+  }, []);
+
   const handleTouchInput = useCallback((input: any) => {
     engineRef.current?.setTouchInput(input);
   }, []);
 
   return (
-    <main className="relative w-full h-screen flex items-center justify-center bg-[#050510] overflow-hidden select-none">
+    <main className="relative w-full h-screen flex items-center justify-center bg-[#050510] overflow-hidden select-none touch-none">
       {/* Game Canvas */}
       <GameCanvas canvasRef={canvasRef} />
 
@@ -134,6 +178,8 @@ export default function SpaceGame() {
           onSelectMode={handleModeChange}
           touchEnabled={touchEnabled}
           onToggleTouch={() => setTouchEnabled((prev) => !prev)}
+          selectedShipId={selectedShipId}
+          onSelectShip={handleShipSelect}
           onStart={handleStart}
           onQuit={() => {}}
         />
@@ -146,6 +192,8 @@ export default function SpaceGame() {
             gameState={gameState}
             onPause={handlePause}
             onReload={handleReload}
+            onPowerShot={() => handlePowerShot('p1')}
+            onBomb={() => handleBomb('p1')}
           />
 
           {/* Virtual Touchscreen Controls */}
@@ -153,7 +201,11 @@ export default function SpaceGame() {
             <TouchControls
               onInputChange={handleTouchInput}
               onReload={() => handleReload('p1')}
-              onPause={handlePause}
+              onPowerShot={() => handlePowerShot('p1')}
+              onBomb={() => handleBomb('p1')}
+              powerShotReady={gameState.p1.powerShotReady}
+              powerShotProgress={gameState.p1.powerShotProgress}
+              bombs={gameState.p1.bombs}
             />
           )}
         </>
@@ -174,8 +226,11 @@ export default function SpaceGame() {
           highScore={gameState.highScore}
           stage={gameState.stage}
           stageName={gameState.stageName}
+          shipId={selectedShipId}
+          weaponTier={gameState.p1.weaponTier}
           onRestart={handleRestart}
           onMainMenu={handleMainMenu}
+          onSelectShip={handleShipSelect}
         />
       )}
 

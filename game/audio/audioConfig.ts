@@ -25,12 +25,22 @@ export const SFX_CONFIG: Record<SoundEffectName, SoundConfig> = {
   'weapon-fire': {
     path: '/audio/sfx/weapon-fire.wav',
     volume: 0.45,
-    minIntervalMs: 80,
+    minIntervalMs: 60,
   },
   'multi-shot': {
     path: '/audio/sfx/weapon-fire.wav',
     volume: 0.55,
-    minIntervalMs: 80,
+    minIntervalMs: 60,
+  },
+  'power-shot': {
+    path: '/audio/sfx/play-punch.wav',
+    volume: 0.9,
+    minIntervalMs: 300,
+  },
+  'bomb-explosion': {
+    path: '/audio/sfx/persona-hurt.wav',
+    volume: 0.95,
+    minIntervalMs: 400,
   },
   'empty-ammo': {
     path: '/audio/sfx/empty-ammo.wav',
@@ -76,6 +86,11 @@ export const SFX_CONFIG: Record<SoundEffectName, SoundConfig> = {
     path: '/audio/sfx/play-punch.wav',
     volume: 0.6,
     minIntervalMs: 200,
+  },
+  'invuln-activate': {
+    path: '/audio/sfx/score-ding.wav',
+    volume: 0.7,
+    minIntervalMs: 300,
   },
   'level-up': {
     path: '/audio/sfx/play-punch.wav',

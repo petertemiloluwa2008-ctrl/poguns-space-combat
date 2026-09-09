@@ -20,6 +20,7 @@ import {
   STAGES,
 } from './constants';
 import { GameState, GameMode, GameStatus, EnemyType, BossState } from './types';
+import { ShipId, SHIPS } from './ships';
 
 export { GAME_WIDTH, GAME_HEIGHT };
 export type { GameState };
@@ -111,12 +112,12 @@ export class GameEngine {
     const profile = ProfileManager.getInstance().getActiveProfile();
     this.highScore = profile.highScore || 0;
 
+    const p1ShipId: ShipId = (profile.selectedShipId as ShipId) || 'vanguard';
     this.player1 = new Player(
       GAME_WIDTH / 2 - (mode === 'coop' ? 60 : 22),
       GAME_HEIGHT - 120,
       'p1',
-      profile.shipColor || BRAND_PINK,
-      NEON_CYAN
+      p1ShipId
     );
 
     if (mode === 'coop') {
@@ -124,8 +125,7 @@ export class GameEngine {
         GAME_WIDTH / 2 + 20,
         GAME_HEIGHT - 120,
         'p2',
-        NEON_CYAN,
-        BRAND_PINK
+        'phantom'
       );
     }
 
@@ -156,6 +156,8 @@ export class GameEngine {
       stageName: stageData.name,
       comboMultiplier: 1.0,
       p1: {
+        shipId: this.player1.shipId,
+        shipName: this.player1.shipConfig.name,
         health: this.player1.health,
         maxHealth: this.player1.maxHealth,
         ammo: this.player1.ammo,
@@ -165,11 +167,20 @@ export class GameEngine {
         weaponTier: this.player1.weaponTier,
         isShielded: this.player1.shieldTimer > 0,
         shieldTimeRemaining: Math.ceil(this.player1.shieldTimer / 1000),
+        isInvincible: this.player1.invulnerabilityPowerTimer > 0,
+        invincibleTimeRemaining: Math.ceil(this.player1.invulnerabilityPowerTimer / 1000),
+        isRapidFire: this.player1.rapidFireTimer > 0,
+        rapidFireTimeRemaining: Math.ceil(this.player1.rapidFireTimer / 1000),
+        bombs: this.player1.bombs,
+        powerShotProgress: this.player1.powerShotCharge,
+        powerShotReady: this.player1.powerShotCharge >= 1,
         isAlive: this.player1.health > 0,
         kills: this.player1.kills,
       },
       p2: this.player2
         ? {
+            shipId: this.player2.shipId,
+            shipName: this.player2.shipConfig.name,
             health: this.player2.health,
             maxHealth: this.player2.maxHealth,
             ammo: this.player2.ammo,
@@ -179,6 +190,13 @@ export class GameEngine {
             weaponTier: this.player2.weaponTier,
             isShielded: this.player2.shieldTimer > 0,
             shieldTimeRemaining: Math.ceil(this.player2.shieldTimer / 1000),
+            isInvincible: this.player2.invulnerabilityPowerTimer > 0,
+            invincibleTimeRemaining: Math.ceil(this.player2.invulnerabilityPowerTimer / 1000),
+            isRapidFire: this.player2.rapidFireTimer > 0,
+            rapidFireTimeRemaining: Math.ceil(this.player2.rapidFireTimer / 1000),
+            bombs: this.player2.bombs,
+            powerShotProgress: this.player2.powerShotCharge,
+            powerShotReady: this.player2.powerShotCharge >= 1,
             isAlive: this.player2.health > 0,
             kills: this.player2.kills,
           }
@@ -240,12 +258,16 @@ export class GameEngine {
         'KeyF',
         'KeyQ',
         'KeyE',
+        'KeyB',
+        'KeyX',
+        'KeyZ',
+        'KeyC',
       ].includes(e.code)
     ) {
       e.preventDefault();
     }
 
-    // P1 Controls (Arrow Keys + Space + R)
+    // P1 Controls
     switch (e.code) {
       case 'ArrowUp':
         this.p1Input.up = pressed;
@@ -261,6 +283,21 @@ export class GameEngine {
         break;
       case 'Space':
         this.p1Input.shoot = pressed;
+        if (pressed && this.gameState.status === 'playing' && this.player1.powerShotCharge >= 1) {
+          this.triggerPowerShot('p1');
+        }
+        break;
+      case 'KeyZ':
+      case 'KeyC':
+        if (pressed && this.gameState.status === 'playing') {
+          this.triggerPowerShot('p1');
+        }
+        break;
+      case 'KeyB':
+      case 'KeyX':
+        if (pressed && this.gameState.status === 'playing') {
+          this.triggerBomb('p1');
+        }
         break;
       case 'KeyR':
         this.p1Input.reload = pressed;
@@ -276,7 +313,7 @@ export class GameEngine {
         break;
     }
 
-    // P2 Controls (WASD + F/Q + E)
+    // P2 Controls (WASD + Q/E/F)
     if (this.mode === 'coop' && this.player2) {
       switch (e.code) {
         case 'KeyW':
@@ -292,19 +329,114 @@ export class GameEngine {
           this.p2Input.right = pressed;
           break;
         case 'KeyF':
-        case 'KeyQ':
           this.p2Input.shoot = pressed;
           break;
+        case 'KeyQ':
+          if (pressed && this.gameState.status === 'playing') {
+            this.triggerPowerShot('p2');
+          }
+          break;
         case 'KeyE':
-          this.p2Input.reload = pressed;
+          if (pressed && this.gameState.status === 'playing') {
+            this.triggerBomb('p2');
+          }
           break;
       }
     }
   }
 
-  // --- External Touch Control Bridge ---
+  // --- External Touch & Mobile Controls Bridge ---
   public setTouchInput(input: Partial<InputState>) {
     Object.assign(this.p1Input, input);
+  }
+
+  public triggerPowerShot(playerTarget: 'p1' | 'p2' = 'p1'): boolean {
+    const player = playerTarget === 'p1' ? this.player1 : this.player2;
+    if (!player || player.health <= 0) return false;
+
+    if (player.tryTriggerPowerShot()) {
+      this.triggerScreenShake(12, 600);
+      this.floatingTexts.push(
+        new FloatingScoreText(
+          player.x + player.width / 2,
+          player.y - 25,
+          '⚡ POWER SHOT ACTIVATED! ⚡',
+          NEON_CYAN,
+          1400
+        )
+      );
+      this.syncGameState();
+      return true;
+    }
+    return false;
+  }
+
+  public triggerBomb(playerTarget: 'p1' | 'p2' = 'p1'): boolean {
+    const player = playerTarget === 'p1' ? this.player1 : this.player2;
+    if (!player || player.health <= 0) return false;
+
+    if (player.tryDeployBomb()) {
+      // Screen shake & heavy visual feedback
+      this.triggerScreenShake(20, 900);
+
+      // Vaporize all enemy projectiles
+      for (const proj of this.enemyProjectiles) {
+        this.createHitSparks(proj.x, proj.y, NEON_CYAN);
+      }
+      this.enemyProjectiles = [];
+
+      // Radial shockwave particles
+      const cx = player.x + player.width / 2;
+      const cy = player.y + player.height / 2;
+      for (let i = 0; i < 45; i++) {
+        const angle = (Math.PI * 2 * i) / 45;
+        const speed = Math.random() * 8 + 4;
+        this.particles.push(
+          new Particle(
+            cx,
+            cy,
+            Math.cos(angle) * speed,
+            Math.sin(angle) * speed,
+            600,
+            NEON_CYAN,
+            3.5
+          )
+        );
+      }
+
+      // 350 AOE Damage to all on-screen enemies
+      const bombDamage = 350;
+      for (let j = this.enemies.length - 1; j >= 0; j--) {
+        const enemy = this.enemies[j];
+        enemy.takeDamage(bombDamage);
+        this.createHitSparks(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, BRAND_PINK);
+        if (enemy.health <= 0) {
+          this.handleEnemyDestruction(enemy, j);
+        }
+      }
+
+      this.floatingTexts.push(
+        new FloatingScoreText(
+          GAME_WIDTH / 2,
+          GAME_HEIGHT / 2 - 20,
+          '★ EMP BOMB DETONATION! ★',
+          NEON_CYAN,
+          2000
+        )
+      );
+
+      this.syncGameState();
+      return true;
+    }
+    return false;
+  }
+
+  public setPlayerShip(shipId: ShipId, playerTarget: 'p1' | 'p2' = 'p1') {
+    const player = playerTarget === 'p1' ? this.player1 : this.player2;
+    if (player) {
+      player.setShip(shipId);
+      this.syncGameState();
+    }
   }
 
   public start() {
@@ -383,12 +515,12 @@ export class GameEngine {
     this.comboMultiplier = 1.0;
     this.screenShakeIntensity = 0;
 
+    const p1ShipId: ShipId = (profile.selectedShipId as ShipId) || 'vanguard';
     this.player1 = new Player(
       GAME_WIDTH / 2 - (this.mode === 'coop' ? 60 : 22),
       GAME_HEIGHT - 120,
       'p1',
-      profile.shipColor || BRAND_PINK,
-      NEON_CYAN
+      p1ShipId
     );
 
     if (this.mode === 'coop') {
@@ -396,8 +528,7 @@ export class GameEngine {
         GAME_WIDTH / 2 + 20,
         GAME_HEIGHT - 120,
         'p2',
-        NEON_CYAN,
-        BRAND_PINK
+        'phantom'
       );
     } else {
       this.player2 = null;
@@ -446,6 +577,30 @@ export class GameEngine {
     return list;
   }
 
+  private checkPowerShotBeamCollisions(player: Player, dt: number) {
+    if (!player.isPowerShotActive) return;
+    const beamCenterX = player.x + player.width / 2;
+    const beamHalfWidth = 26;
+    const dps = 550;
+    const tickDamage = (dps * dt) / 1000;
+
+    for (let j = this.enemies.length - 1; j >= 0; j--) {
+      const enemy = this.enemies[j];
+      if (
+        enemy.x + enemy.width >= beamCenterX - beamHalfWidth &&
+        enemy.x <= beamCenterX + beamHalfWidth &&
+        enemy.y + enemy.height >= 0 &&
+        enemy.y <= player.y
+      ) {
+        enemy.takeDamage(tickDamage);
+        this.createHitSparks(beamCenterX, enemy.y + enemy.height / 2, '#00F0FF');
+        if (enemy.health <= 0) {
+          this.handleEnemyDestruction(enemy, j);
+        }
+      }
+    }
+  }
+
   private update(dt: number) {
     const difficulty = getDifficultyConfig(this.currentStage, this.currentLevel);
 
@@ -464,14 +619,14 @@ export class GameEngine {
       }
     }
 
-    // 1. Update Players
+    // 1. Update Players & Auto-shooting
     if (this.player1.health > 0) {
-      this.player1.update(dt, this.p1Input, GAME_WIDTH, GAME_HEIGHT, this.particles);
-      this.player1.tryShoot(this.p1Input, this.playerProjectiles);
+      this.player1.update(dt, this.p1Input, GAME_WIDTH, GAME_HEIGHT, this.particles, this.playerProjectiles);
+      this.checkPowerShotBeamCollisions(this.player1, dt);
     }
     if (this.player2 && this.player2.health > 0) {
-      this.player2.update(dt, this.p2Input, GAME_WIDTH, GAME_HEIGHT, this.particles);
-      this.player2.tryShoot(this.p2Input, this.playerProjectiles);
+      this.player2.update(dt, this.p2Input, GAME_WIDTH, GAME_HEIGHT, this.particles, this.playerProjectiles);
+      this.checkPowerShotBeamCollisions(this.player2, dt);
     }
 
     // Check Total Party Wipeout
@@ -608,16 +763,24 @@ export class GameEngine {
         this.floatingTexts.push(new FloatingScoreText(cx, cy, '+35 HP RESTORED', NEON_CYAN, 1000));
         break;
 
-      case 'ammo':
-        player.ammo = player.maxAmmo;
-        player.reserveAmmo += 60;
-        player.isReloading = false;
-        this.floatingTexts.push(new FloatingScoreText(cx, cy, '+AMMO RESTOCK', GOLD_ACCENT, 1000));
-        break;
-
       case 'shield':
         player.activateShield();
         this.floatingTexts.push(new FloatingScoreText(cx, cy, 'PLASMA SHIELD ON!', '#3A86FF', 1200));
+        break;
+
+      case 'rapid':
+        player.activateRapidFire();
+        this.floatingTexts.push(new FloatingScoreText(cx, cy, '⚡ HYPER RAPID-FIRE! ⚡', '#FFB800', 1200));
+        break;
+
+      case 'invuln':
+        player.activateInvincibility();
+        this.floatingTexts.push(new FloatingScoreText(cx, cy, '★ INVINCIBILITY ACTIVE! ★', GOLD_ACCENT, 1400));
+        break;
+
+      case 'bomb':
+        player.addBomb();
+        this.floatingTexts.push(new FloatingScoreText(cx, cy, '+1 EMP BOMB STOCK!', '#FF0054', 1200));
         break;
 
       case 'crystal':
@@ -855,30 +1018,48 @@ export class GameEngine {
     this.gameState.boss = bossState;
 
     this.gameState.p1 = {
+      shipId: this.player1.shipId,
+      shipName: this.player1.shipConfig.name,
       health: Math.max(0, Math.round(this.player1.health)),
       maxHealth: this.player1.maxHealth,
       ammo: this.player1.ammo,
       maxAmmo: this.player1.maxAmmo,
       reserveAmmo: this.player1.reserveAmmo,
       isReloading: this.player1.isReloading,
-      weaponTier: this.player1.overdriveTimer > 0 ? 5 : this.player1.weaponTier,
+      weaponTier: this.player1.weaponTier,
       isShielded: this.player1.shieldTimer > 0,
       shieldTimeRemaining: Math.ceil(this.player1.shieldTimer / 1000),
+      isInvincible: this.player1.invulnerabilityPowerTimer > 0,
+      invincibleTimeRemaining: Math.ceil(this.player1.invulnerabilityPowerTimer / 1000),
+      isRapidFire: this.player1.rapidFireTimer > 0,
+      rapidFireTimeRemaining: Math.ceil(this.player1.rapidFireTimer / 1000),
+      bombs: this.player1.bombs,
+      powerShotProgress: this.player1.powerShotCharge,
+      powerShotReady: this.player1.powerShotCharge >= 1,
       isAlive: this.player1.health > 0,
       kills: this.player1.kills,
     };
 
     if (this.player2) {
       this.gameState.p2 = {
+        shipId: this.player2.shipId,
+        shipName: this.player2.shipConfig.name,
         health: Math.max(0, Math.round(this.player2.health)),
         maxHealth: this.player2.maxHealth,
         ammo: this.player2.ammo,
         maxAmmo: this.player2.maxAmmo,
         reserveAmmo: this.player2.reserveAmmo,
         isReloading: this.player2.isReloading,
-        weaponTier: this.player2.overdriveTimer > 0 ? 5 : this.player2.weaponTier,
+        weaponTier: this.player2.weaponTier,
         isShielded: this.player2.shieldTimer > 0,
         shieldTimeRemaining: Math.ceil(this.player2.shieldTimer / 1000),
+        isInvincible: this.player2.invulnerabilityPowerTimer > 0,
+        invincibleTimeRemaining: Math.ceil(this.player2.invulnerabilityPowerTimer / 1000),
+        isRapidFire: this.player2.rapidFireTimer > 0,
+        rapidFireTimeRemaining: Math.ceil(this.player2.rapidFireTimer / 1000),
+        bombs: this.player2.bombs,
+        powerShotProgress: this.player2.powerShotCharge,
+        powerShotReady: this.player2.powerShotCharge >= 1,
         isAlive: this.player2.health > 0,
         kills: this.player2.kills,
       };

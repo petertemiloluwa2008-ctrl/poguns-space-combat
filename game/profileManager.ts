@@ -16,6 +16,7 @@ const DEFAULT_PROFILE: PilotProfile = {
   bossesDefeated: 0,
   stagesCleared: 0,
   shipColor: BRAND_PINK,
+  selectedShipId: 'vanguard',
   achievements: [],
 };
 
@@ -99,6 +100,7 @@ export class ProfileManager {
       bossesDefeated: 0,
       stagesCleared: 0,
       shipColor,
+      selectedShipId: 'vanguard',
       achievements: [],
     };
     this.profiles.push(newProfile);
@@ -116,6 +118,18 @@ export class ProfileManager {
   public updateActiveShipColor(color: string) {
     const p = this.getActiveProfile();
     p.shipColor = color;
+    this.saveProfiles();
+  }
+
+  public updateActiveShip(shipId: any) {
+    const p = this.getActiveProfile();
+    p.selectedShipId = shipId;
+    this.saveProfiles();
+  }
+
+  public updateProfile(updates: Partial<PilotProfile>) {
+    const p = this.getActiveProfile();
+    Object.assign(p, updates);
     this.saveProfiles();
   }
 

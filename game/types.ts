@@ -1,8 +1,17 @@
+import { ShipId } from './ships';
+
 export type GameStatus = 'start' | 'playing' | 'paused' | 'gameOver' | 'victory';
 
 export type GameMode = 'solo' | 'coop';
 
-export type PowerUpType = 'health' | 'ammo' | 'weapon' | 'shield' | 'crystal';
+export type PowerUpType =
+  | 'health'
+  | 'shield'
+  | 'rapid'
+  | 'invuln'
+  | 'bomb'
+  | 'weapon'
+  | 'crystal';
 
 export type WeaponTier = 1 | 2 | 3 | 4 | 5;
 
@@ -13,6 +22,7 @@ export type EnemyType =
   | 'shooter'
   | 'stealth'
   | 'kamikaze'
+  | 'shield'
   | 'elite'
   | 'boss';
 
@@ -27,6 +37,8 @@ export interface BossState {
 }
 
 export interface PlayerStats {
+  shipId: ShipId;
+  shipName: string;
   health: number;
   maxHealth: number;
   ammo: number;
@@ -36,6 +48,13 @@ export interface PlayerStats {
   weaponTier: number;
   isShielded: boolean;
   shieldTimeRemaining: number;
+  isInvincible: boolean;
+  invincibleTimeRemaining: number;
+  isRapidFire: boolean;
+  rapidFireTimeRemaining: number;
+  bombs: number;
+  powerShotProgress: number; // 0 to 1
+  powerShotReady: boolean;
   isAlive: boolean;
   kills: number;
 }
@@ -56,7 +75,7 @@ export interface GameState {
   p2?: PlayerStats;
   boss?: BossState | null;
 
-  // Backward compatibility fields for single-player access
+  // Single-player backward compatibility shortcuts
   playerHealth: number;
   playerMaxHealth: number;
   ammo: number;
@@ -78,6 +97,7 @@ export interface PilotProfile {
   bossesDefeated: number;
   stagesCleared: number;
   shipColor: string;
+  selectedShipId: ShipId;
   achievements: string[];
 }
 

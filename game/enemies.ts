@@ -145,6 +145,11 @@ export class Enemy {
         }
         break;
 
+      case 'shield':
+        this.y += this.speed * 0.85;
+        this.x += Math.sin(this.oscillationTimer * 1.5) * 1.2;
+        break;
+
       case 'boss':
         this.updateBossBehavior(dt, targetPlayer, enemyProjectiles, arenaWidth, spawnMinion);
         break;
@@ -406,6 +411,34 @@ export class Enemy {
         ctx.fillStyle = '#FF69C9';
         ctx.fillRect(-w * 0.3, -h * 0.1, 5, 12);
         ctx.fillRect(w * 0.3 - 5, -h * 0.1, 5, 12);
+        break;
+
+      case 'shield':
+        // Armored guardian with a front energy barrier
+        ctx.fillStyle = '#051923';
+        ctx.strokeStyle = '#00A8E8';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.4, -h * 0.4);
+        ctx.lineTo(w * 0.4, -h * 0.4);
+        ctx.lineTo(w * 0.3, h * 0.3);
+        ctx.lineTo(0, h * 0.5);
+        ctx.lineTo(-w * 0.3, h * 0.3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Front glowing shield arc
+        ctx.strokeStyle = '#00F0FF';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.arc(0, h * 0.1, w * 0.5, 0.15 * Math.PI, 0.85 * Math.PI, false);
+        ctx.stroke();
+
+        ctx.fillStyle = '#00F0FF';
+        ctx.beginPath();
+        ctx.arc(0, -h * 0.05, 5, 0, Math.PI * 2);
+        ctx.fill();
         break;
 
       case 'boss':

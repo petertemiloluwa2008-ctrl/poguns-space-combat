@@ -4,6 +4,8 @@ export enum AudioEvent {
   PLAY_CLICK = 'PLAY_CLICK',
   PLAYER_SHOT = 'PLAYER_SHOT',
   MULTI_SHOT = 'MULTI_SHOT',
+  POWER_SHOT = 'POWER_SHOT',
+  BOMB_EXPLOSION = 'BOMB_EXPLOSION',
   AMMO_EMPTY = 'AMMO_EMPTY',
   RELOAD_STARTED = 'RELOAD_STARTED',
   BULLET_WALL_IMPACT = 'BULLET_WALL_IMPACT',
@@ -13,6 +15,7 @@ export enum AudioEvent {
   SCORE_AWARDED = 'SCORE_AWARDED',
   POWERUP_PICKUP = 'POWERUP_PICKUP',
   SHIELD_ACTIVATE = 'SHIELD_ACTIVATE',
+  INVULN_ACTIVATE = 'INVULN_ACTIVATE',
   LEVEL_UP = 'LEVEL_UP',
   STAGE_CLEAR = 'STAGE_CLEAR',
   BOSS_WARNING = 'BOSS_WARNING',
@@ -28,6 +31,8 @@ export type SoundEffectName =
   | 'play-punch'
   | 'weapon-fire'
   | 'multi-shot'
+  | 'power-shot'
+  | 'bomb-explosion'
   | 'empty-ammo'
   | 'reload'
   | 'bullet-wall-impact'
@@ -37,6 +42,7 @@ export type SoundEffectName =
   | 'low-health-warning'
   | 'powerup-pickup'
   | 'shield-activate'
+  | 'invuln-activate'
   | 'level-up'
   | 'stage-clear'
   | 'boss-warning'

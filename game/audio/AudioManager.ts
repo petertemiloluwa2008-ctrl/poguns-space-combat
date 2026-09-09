@@ -138,6 +138,15 @@ export class AudioManager {
       case AudioEvent.SHIELD_ACTIVATE:
         this.playSynthShield();
         break;
+      case AudioEvent.POWER_SHOT:
+        this.playSynthPowerShot();
+        break;
+      case AudioEvent.BOMB_EXPLOSION:
+        this.playSynthBombExplosion();
+        break;
+      case AudioEvent.INVULN_ACTIVATE:
+        this.playSynthInvuln();
+        break;
       case AudioEvent.LEVEL_UP:
         this.playSynthLevelUp();
         break;
@@ -274,6 +283,57 @@ export class AudioManager {
     gain.connect(this.sfxGain);
     osc.start(t);
     osc.stop(t + 0.25);
+  }
+
+  private playSynthPowerShot() {
+    if (this.isMutedState || !this.audioCtx || !this.sfxGain) return;
+    const t = this.audioCtx.currentTime;
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(1400, t);
+    osc.frequency.exponentialRampToValueAtTime(180, t + 0.35);
+    gain.gain.setValueAtTime(0.45, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.38);
+  }
+
+  private playSynthBombExplosion() {
+    if (this.isMutedState || !this.audioCtx || !this.sfxGain) return;
+    const t = this.audioCtx.currentTime;
+    // Deep sub-bass boom
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(120, t);
+    osc.frequency.exponentialRampToValueAtTime(20, t + 0.8);
+    gain.gain.setValueAtTime(0.65, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.85);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.85);
+  }
+
+  private playSynthInvuln() {
+    if (this.isMutedState || !this.audioCtx || !this.sfxGain) return;
+    const notes = [659.25, 830.61, 987.77, 1318.5]; // E5, G#5, B5, E6
+    const t = this.audioCtx.currentTime;
+    notes.forEach((freq, idx) => {
+      const osc = this.audioCtx!.createOscillator();
+      const gain = this.audioCtx!.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.04);
+      gain.gain.setValueAtTime(0.3, t + idx * 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.04 + 0.15);
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(t + idx * 0.04);
+      osc.stop(t + idx * 0.04 + 0.15);
+    });
   }
 
   private playSynthLevelUp() {
